@@ -203,4 +203,4 @@ See [DEVLOG.md](DEVLOG.md) for detailed engineering notes including model select
 ## Author / 작성자
 
 Contributions, issues, and pull requests are welcome.
-GitHub: [your-username](https://github.com/your-username)
+GitHub: [summerly18](https://github.com/summerly18)
