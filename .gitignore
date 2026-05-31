@@ -1,0 +1,20 @@
+# 작업 데이터 (클라이언트 파일 보호)
+input/
+1_extracted/
+2_translated/
+3_reviewed/
+4_final/
+output/
+
+# 모델 파일
+*.gguf
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# 시스템
+.DS_Store
+Thumbs.db
