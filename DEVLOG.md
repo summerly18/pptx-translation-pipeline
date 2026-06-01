@@ -4,7 +4,7 @@ A local LLM pipeline that extracts text from PowerPoint decks, translates FR→K
 with a domain-specific glossary, exports a review spreadsheet, and re-inserts
 the approved translation back into the original PPTX.
 
-Stack: Python, python-pptx, openpyxl, llama.cpp (Qwen3.5-9B-Q4_K_M), RTX 5070 Laptop 8GB.
+Stack: Python, python-pptx, openpyxl, llama.cpp (Qwen3-14B-Q5_K_M), RTX 5070 Laptop 8GB.
 
 ---
 
@@ -31,9 +31,9 @@ input/         원본 PPTX
 
 | # | Issue | Root Cause | Resolution |
 |---|-------|-----------|------------|
-| 1 | Mistral Nemo 12B: missing translations, English output, prompt leakage | Weak FR→KO coverage; strong only on FR→EN | Switched to Qwen3.5 9B |
-| 2 | Qwen3.5 load failure: `missing tensor 'blk.32.ssm_conv1d.weight'` | SSM/hybrid architecture unsupported by installed llama.cpp | Updated llama.cpp to build b9374 |
-| 3 | Empty `content`, output only in `reasoning_content` | Qwen3.5 hybrid reasoning model; thinking on by default | Set `chat_template_kwargs: {enable_thinking: false}` |
+| 1 | Mistral Nemo 12B: missing translations, English output, prompt leakage | Weak FR→KO coverage; strong only on FR→EN | Switched to Qwen3 14B |
+| 2 | Qwen3 load failure: `missing tensor 'blk.32.ssm_conv1d.weight'` | SSM/hybrid architecture unsupported by installed llama.cpp | Updated llama.cpp to build b9374 |
+| 3 | Empty `content`, output only in `reasoning_content` | Qwen3 hybrid reasoning model; thinking on by default | Set `chat_template_kwargs: {enable_thinking: false}` |
 | 4 | Model continued the prompt instead of answering | Used raw `/completion` endpoint | Switched to `/chat/completions` with system/user roles |
 | 5 | `IllegalCharacterError` on Excel save (lost a full translation run) | Control chars in extracted PPTX text | Strip `\x00-\x1F` before writing cells |
 | 6 | Untranslated ALL-CAPS headers (OBJECTIFS, ACTION, DÉFIS) | SKIP rule treated ≤10-char uppercase as acronyms | Replaced heuristic with explicit KNOWN_ACRONYMS whitelist (Day 2) |
@@ -53,7 +53,7 @@ input/         원본 PPTX
 
 ### Hardware Notes
 - RTX 5070 Laptop (8GB): Mistral 12B Q4 (~7.3GB) saturates VRAM and throttles throughput.
-- Qwen3.5 9B Q4 (~5.68GB) leaves ~2GB headroom; runs cooler (~42°C), full GPU offload at `--gpu-layers 99`.
+- Qwen3 14B Q5 (~10.5GB) is used for quality A/B testing; start conservatively at `--gpu-layers 20` on 8GB VRAM.
 - CPU usage ~1% at full offload — confirms inference is memory-bound, not CPU-bound.
 
 ---

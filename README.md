@@ -43,7 +43,7 @@ Each stage writes to its own folder, so work survives interruption and every art
 - **Per-slide context** — Each item is translated with the rest of its slide as reference context, improving consistency
 - **Resume support** — Translation can be interrupted and resumed; already-translated items are skipped
 - **Checkpoint saves** — Progress saved every 10 items to prevent data loss on crash
-- **Thinking-mode suppression** — Qwen3.5 is a hybrid reasoning model; `enable_thinking: false` is required to get clean output
+- **Thinking-mode suppression** — Qwen3 is a hybrid reasoning model; `enable_thinking: false` is required to get clean output
 - **Post-processing** — Strips prompt leakage, Korean annotations embedded in source text, and skips emails/URLs/phone numbers
 
 ---
@@ -53,7 +53,7 @@ Each stage writes to its own folder, so work survives interruption and every art
 - **슬라이드 문맥 참조** — 같은 슬라이드의 다른 텍스트를 문맥으로 제공하여 번역 일관성 향상
 - **이어하기 지원** — 번역 중단 후 재실행 시 완료된 항목 건너뛰기
 - **주기적 중간 저장** — 매 10개마다 저장하여 장애 시 데이터 손실 최소화
-- **Thinking 모드 억제** — Qwen3.5는 하이브리드 추론 모델; `enable_thinking: false` 필수
+- **Thinking 모드 억제** — Qwen3는 하이브리드 추론 모델; `enable_thinking: false` 필수
 - **후처리** — 프롬프트 누출, 원문 내 한국어 주석, 이메일/URL/전화번호 자동 처리
 
 ---
@@ -63,31 +63,31 @@ Each stage writes to its own folder, so work survives interruption and every art
 | Component | Choice | Reason |
 |-----------|--------|--------|
 | LLM inference | llama.cpp b9374 | Local, no API cost, CUDA offload |
-| Translation model | Qwen3.5-9B-Q4_K_M | Best FR→KO quality at 8GB VRAM |
+| Translation model | Qwen3-14B-Q5_K_M | Best FR→KO quality at 8GB VRAM |
 | PPTX processing | python-pptx | Read/write with layout preservation |
 | Review format | openpyxl (Excel) | Human-readable, easy to edit |
-| Hardware | RTX 5070 Laptop 8GB | Full model offload at ~gpu-layers 99 |
+| Hardware | RTX 5070 Laptop 8GB | Start with partial offload at gpu-layers 20 |
 
-### Why Qwen3.5 over Mistral Nemo 12B / Qwen3.5를 선택한 이유
+### Why Qwen3 over Mistral Nemo 12B / Qwen3를 선택한 이유
 
 Mistral Nemo 12B was tested first. Issues: missing translations on long sentences, English output instead of Korean, prompt leakage. Root cause: weak FR→KO training coverage.
 
-Qwen3.5 9B resolved all three issues. It also fits in 8GB VRAM with ~2GB headroom (vs Mistral's 7.3GB which saturated VRAM and throttled throughput).
+Qwen3 14B resolved all three issues. It also fits in 8GB VRAM with ~2GB headroom (vs Mistral's 7.3GB which saturated VRAM and throttled throughput).
 
-처음에는 Mistral Nemo 12B를 사용했으나, 장문 번역 누락, 영어 출력, 프롬프트 누출 문제가 발생했습니다. 불어→한국어 학습 데이터 부족이 원인이었습니다. Qwen3.5 9B로 교체 후 세 가지 문제 모두 해결됐습니다.
+처음에는 Mistral Nemo 12B를 사용했으나, 장문 번역 누락, 영어 출력, 프롬프트 누출 문제가 발생했습니다. 불어→한국어 학습 데이터 부족이 원인이었습니다. Qwen3 14B로 교체 후 세 가지 문제 모두 해결됐습니다.
 
 ### Why thinking mode must be disabled / Thinking 모드를 꺼야 하는 이유
 
-Qwen3.5 is a hybrid reasoning model. By default, it routes all tasks through its reasoning engine, outputting results in `reasoning_content` while leaving `content` empty. For translation, this wastes tokens on unnecessary chain-of-thought and produces no usable output. Setting `chat_template_kwargs: {enable_thinking: false}` routes output directly to `content`.
+Qwen3 is a hybrid reasoning model. By default, it routes all tasks through its reasoning engine, outputting results in `reasoning_content` while leaving `content` empty. For translation, this wastes tokens on unnecessary chain-of-thought and produces no usable output. Setting `chat_template_kwargs: {enable_thinking: false}` routes output directly to `content`.
 
-Qwen3.5는 하이브리드 추론 모델로, 기본값에서 모든 작업을 추론 엔진으로 처리하여 `reasoning_content`에만 결과를 출력하고 `content`는 비워둡니다. 번역 같은 단순 작업에서는 불필요한 추론 토큰을 낭비합니다. `enable_thinking: false`로 직접 출력 모드를 사용해야 합니다.
+Qwen3는 하이브리드 추론 모델로, 기본값에서 모든 작업을 추론 엔진으로 처리하여 `reasoning_content`에만 결과를 출력하고 `content`는 비워둡니다. 번역 같은 단순 작업에서는 불필요한 추론 토큰을 낭비합니다. `enable_thinking: false`로 직접 출력 모드를 사용해야 합니다.
 
 ---
 
 ## Hardware Notes / 하드웨어
 
 - **GPU**: NVIDIA RTX 5070 Laptop (8GB VRAM)
-- **`--gpu-layers 99`**: Full model offload to GPU; CPU usage drops to ~1%
+- **`--gpu-layers 20`**: Conservative partial GPU offload for the 14B Q5 model on 8GB VRAM; raise manually after stability checks
 - **Inference is memory-bound**: GPU utilization stays under 50% because each token generation requires reading the full model weights from VRAM. Higher TGP would not improve throughput; VRAM bandwidth is the bottleneck.
 
 추론은 memory-bound 작업입니다. 토큰 하나를 생성할 때마다 모델 가중치 전체를 VRAM에서 읽어야 하므로 GPU 연산 유닛이 대기하게 됩니다. TGP를 높여도 속도 향상은 없으며, VRAM 용량과 대역폭이 실질적인 제약입니다.
@@ -105,11 +105,11 @@ venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-Download Qwen3.5-9B-Q4_K_M.gguf from HuggingFace (bartowski):
+Download Qwen3-14B-Q5_K_M.gguf from HuggingFace (bartowski):
 ```bash
 pip install huggingface_hub
-huggingface-cli download bartowski/Qwen_Qwen3.5-9B-GGUF \
-  --include "Qwen_Qwen3.5-9B-Q4_K_M.gguf" \
+huggingface-cli download bartowski/Qwen_Qwen3-14B-GGUF \
+  --include "Qwen_Qwen3-14B-Q5_K_M.gguf" \
   --local-dir /path/to/llama/models
 ```
 
@@ -120,7 +120,7 @@ huggingface-cli download bartowski/Qwen_Qwen3.5-9B-GGUF \
 ### 1. Start the LLM server / LLM 서버 시작
 ```bash
 cd /path/to/llama
-./llama-server -m models/Qwen_Qwen3.5-9B-Q4_K_M.gguf --gpu-layers 99 --port 8080
+./llama-server -m models/Qwen_Qwen3-14B-Q5_K_M.gguf --gpu-layers 20 --ctx-size 4096 --port 8080
 ```
 
 ### 2. Extract text / 텍스트 추출
